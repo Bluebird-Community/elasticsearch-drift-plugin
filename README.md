@@ -1,4 +1,4 @@
-# Elasticsearch Drift Plugin  [![CircleCI](https://circleci.com/gh/OpenNMS/elasticsearch-drift-plugin.svg?style=svg)](https://circleci.com/gh/OpenNMS/elasticsearch-drift-plugin)
+# Elasticsearch Drift Plugin [![drift-plugin-build](https://github.com/Bluebird-Community/elasticsearch-drift-plugin/actions/workflows/drift-plugin-build.yaml/badge.svg)](https://github.com/Bluebird-Community/elasticsearch-drift-plugin/actions/workflows/drift-plugin-build.yaml) 
 
 Time series aggregation for flow records.
 
