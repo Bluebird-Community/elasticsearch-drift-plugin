@@ -3,6 +3,7 @@ name: drift-plugin-build
 run-name: Build Elasticsearch Drift plugin
 on:
   push:
+  workflow_dispatch:
 
 ## Build and create the project on every push to the project
 jobs:
