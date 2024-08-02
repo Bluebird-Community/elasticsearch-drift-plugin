@@ -36,13 +36,18 @@ jobs:
           - 7.17.22
     runs-on: ubuntu-latest
     container:
-      image: quay.io/bluebird/java-builder:0.0.3.jdk-17
+      image: quay.io/bluebird/java-builder:0.1.0.jdk-17.b35
     steps:
       - uses: actions/checkout@v4
       - name: Add workspace to git safe.directory
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: Build plugin from source
-        run: make ES_VERSION=${{ matrix.es_version }}
+        run: |
+          make ES_VERSION=${{ matrix.es_version }}
+      - name: Run JUnit and Integration test suite
+        run: |
+          sudo chown -R cicd:cicd $GITHUB_WORKSPACE
+          sudo -u cicd PATH="${PATH}" JAVA_HOME="${JAVA_HOME}" M2_HOME="${M2_HOME}" make ES_VERSION=${{ matrix.es_version }} tests
       - name: Persist drift-plugin artifacts
         uses: actions/upload-artifact@v4
         with:
