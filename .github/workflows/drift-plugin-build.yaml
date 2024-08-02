@@ -47,8 +47,36 @@ jobs:
         run: |
           sudo chown -R cicd:cicd $GITHUB_WORKSPACE
           sudo -u cicd PATH="${PATH}" JAVA_HOME="${JAVA_HOME}" M2_HOME="${M2_HOME}" make ES_VERSION=${{ matrix.es_version }} tests
+      - name: Publish Test Report
+        if: success() || failure()
+        uses: scacap/action-surefire-report@v1
+        with:
+          check_name: Test Report ${{ matrix.es_version }}
+      - name: Create zip, rpm and deb packages
+        run: |
+          make ES_VERSION=${{ matrix.es_version }} PACKAGE_VERSION=${{ github.run_number }} packages
       - name: Persist drift-plugin artifacts
         uses: actions/upload-artifact@v4
         with:
           name: es-drift-${{ matrix.es_version }}
-          path: drift/target/*.jar
+          path: |
+            drift/target/*.jar
+            drift/target/releases/*.zip
+            drift/target/releases/*.deb
+            drift/target/releases/*.rpm
+      - name: Publish Debian packages to Cloudsmith
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          export CLOUDSMITH_API_KEY=${{ secrets.CLOUDSMITH_API_KEY }}
+          for deb in $(ls drift/target/releases/*-${{ github.run_number }}_all.deb); do
+            cloudsmith push deb bluebird/common/any-distro/any-version ${deb};
+          done;
+      - name: Publish RPM packages to Cloudsmith
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          export CLOUDSMITH_API_KEY=${{ secrets.CLOUDSMITH_API_KEY }}
+          for rpm in $(ls drift/target/releases/*-${{ github.run_number }}.noarch.rpm); do
+            cloudsmith push rpm bluebird/common/any-distro/any-version ${rpm};
+          done;

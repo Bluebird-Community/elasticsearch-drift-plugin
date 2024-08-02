@@ -25,7 +25,7 @@
 
     <properties>
         <!-- in CI the revision is extracted from tags -->
-        <revision>2.0.5-SNAPSHOT</revision>
+        <revision>2.0.6</revision>
 
         <log4j.version>2.20.0</log4j.version>
 
@@ -51,12 +51,12 @@
         </license>
     </licenses>
     <issueManagement>
-      <system>Jira</system>
-      <url>http://issues.opennms.org/</url>
+      <system>GitHub Issues</system>
+      <url>https://github.com/Bluebird-Community/elasticsearch-drift-plugin/issues</url>
     </issueManagement>
     <ciManagement>
-      <system>CircleCI</system>
-      <url>https://app.circleci.com/pipelines/github/OpenNMS/elasticsearch-drift-plugin</url>
+      <system>GitHub Actions</system>
+      <url>https://github.com/Bluebird-Community/elasticsearch-drift-plugin/actions</url>
     </ciManagement>
     <developers>
       <developer>
@@ -91,9 +91,9 @@
       </developer>
     </developers>
     <scm>
-      <connection>scm:git:https://github.com/OpenNMS/elasticsearch-drift-plugin.git</connection>
-      <developerConnection>scm:git:https://${user.name}@github.com/OpenNMS/elasticsearch-drift-plugin.git</developerConnection>
-      <url>https://github.com/OpenNMS/elasticsearch-drift-plugin</url>
+      <connection>scm:git:https://github.com/Bluebird-Community/elasticsearch-drift-plugin.git</connection>
+      <developerConnection>scm:git:https://${user.name}@github.com/Bluebird-Community/elasticsearch-drift-plugin.git</developerConnection>
+      <url>https://github.com/Bluebird-Community/elasticsearch-drift-plugin</url>
     </scm>
 
     <build>
