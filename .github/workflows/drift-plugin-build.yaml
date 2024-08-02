@@ -56,6 +56,7 @@ jobs:
           check_name: Test Report ${{ matrix.es_version }}
       - name: Create zip, rpm and deb packages
         run: |
+          make clean
           make ES_VERSION=${{ matrix.es_version }} PACKAGE_VERSION=${{ github.run_number }} packages
       - name: Persist drift-plugin artifacts
         uses: actions/upload-artifact@v4
