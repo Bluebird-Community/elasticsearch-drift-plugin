@@ -2,13 +2,12 @@
 
 Time series aggregation for flow records.
 
-|   Drift Plugin  | Elasticsearch     | Release date   |
-|-----------------|-------------------|:--------------:|
-| 1.0.x           | 6.2.4             |  May 2018      |
-| 1.1.0           | 6.5.4             |  Feb 2019      |
-| x.y.z           | x.y.z             |  June 2019     |
-
-> After 1.1.0 we switched to using the same version number as the Elasticsearch version that is being targetted.
+| Elasticsearch |
+|---------------|
+| 7.6.[0-3]     |
+| 7.10.[0-2]    |
+| 7.16.[0-3]    |
+| 7.17.[0-26]   |
 
 ## Overview
 
@@ -24,31 +23,31 @@ This aggregation function behaves like a hybrid of both the `Metrics` and `Bucke
 ### RPM
 
 Install the package repository:
-```
+```bash
 sudo yum install https://yum.opennms.org/repofiles/opennms-repo-stable-rhel7.noarch.rpm
 sudo rpm --import https://yum.opennms.org/OPENNMS-GPG-KEY
 ```
 
 Install the package:
-```
+```bash
 sudo yum install elasticsearch-drift-plugin
 ```
 
 ### Debian
 
 Create a new apt source file (eg: `/etc/apt/sources.list.d/opennms.list`), and add the following 2 lines:
-```
+```bash
 deb https://debian.opennms.org stable main
 deb-src https://debian.opennms.org stable main
 ```
 
 Import the packages' authentication key with the following command:
-```
+```bash
 wget -O - https://debian.opennms.org/OPENNMS-GPG-KEY | sudo apt-key add -
 ```
 
 Install the package:
-```
+```bash
 sudo apt-get update
 sudo apt-get install elasticsearch-drift-plugin
 ```
@@ -69,7 +68,7 @@ Each Netflow record is stored as a separate document and contains the following 
 
 For this record, we’d like to be able to generate a time series with start=0, end=500, step=100, and have the following data points:
 
-```
+```plain
 t=0, bytes=0
 t=100, bytes=100
 t=200, bytes=100
@@ -179,16 +178,42 @@ Here we can see that many buckets were generated for the single document and tha
 
 ## Building and installing from source
 
-To compile the plugin run:
-```
-mvn clean package
+There is a branch for compatibility of the Elasticsearch main version line, e.g. `es-7.6.x`, `es-7.10.x`, `es-7.16.x` and `es-7.17.x`.
+Checkout the branch you want to build.
+
+Requirements:
+
+* OpenJDK 11 or 17
+* Packages are built with [fpm](https://fpm.readthedocs.io/en/v1.7.0/intro.html) and needs to be installed
+
+```bash
+git clone https://github.com/Bluebird-Community/elasticsearch-drift-plugin.git
+git checkout -b es-7.17.x origin/es-7.17.x
 ```
 
+To compile the plugin run:
+```bash
+make
+```
+
+You can the integration test suite with
+
+```bash
+make tests
+```
+
+Building RPM and DEB packages can be done with.
+The ES_VERSION needs to match your pom build dependency version to indicate users where they can install the plugin.
+The package version is just a increasing number which identifies the package version release.
+
+```bash
+ make ES_VERSION=7.17.26 PACKAGE_VERSION=0 packages
+
+ ```
 Next, ensure setup an Elasticsearch instance using the same version that is defined in the `pom.xml`.
 The version must match exactly, otherwise Elasticsearch will refuse to start.
 
 Install the plugin using:
 ```
-/usr/share/elasticsearch/bin/elasticsearch-plugin install file:///path/to/elasticsearch-drift/plugin/target/releases/elasticsearch-drift-plugin-1.0.0-SNAPSHOT.zip
+/usr/share/elasticsearch/bin/elasticsearch-plugin install file:///path/to/elasticsearch-drift/plugin/target/releases/elasticsearch-drift-plugin-7.17.26-2.0.6.zip
 ```
-
