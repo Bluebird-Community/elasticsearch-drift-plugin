@@ -1,8 +1,8 @@
 .DEFAULT_GOAL := build
 
 SHELL               := /bin/bash -o nounset -o pipefail -o errexit
-MAVEN_SETTINGS_XML  ?= ./.cicd-assets/settings.xml
-ES_VERSION          := 7.17.26
+MAVEN_SETTINGS_XML  ?= ""
+ES_VERSION          := 7.17.28
 ROOT_CHECK          := $(shell if [ "$$(id -u)" = "0" ]; then echo "root"; else echo "not_root"; fi)
 PACKAGE_PROFILE     ?= build.fpm.usr.local
 PACKAGE_VERSION     ?= 0
@@ -36,7 +36,7 @@ deps-packages:
 
 .PHONY build:
 build: deps-build
-	mvn --settings=$(MAVEN_SETTINGS_XML) package -Delasticsearch.version=$(ES_VERSION)
+	mvn package -Delasticsearch.version=$(ES_VERSION)
 
 .PHONY tests:
 tests: deps-build
@@ -45,13 +45,13 @@ ifeq ($(ROOT_CHECK),root)
 	@false
 else
 	@echo "Running as non-root user"
-	mvn --settings=$(MAVEN_SETTINGS_XML) test integration-test -Delasticsearch.version=$(ES_VERSION)
+	mvn test integration-test -Delasticsearch.version=$(ES_VERSION)
 endif
 
 .PHONY packages:
 packages: deps-build deps-packages
-	mvn --settings=$(MAVEN_SETTINGS_XML) package -P $(PACKAGE_PROFILE) -DpackageVersion=$(VERSION) -Drevision=$(VERSION) -DpackageRevision=$(PACKAGE_VERSION) -Delasticsearch.version=$(ES_VERSION)
+	mvn package -P $(PACKAGE_PROFILE) -DpackageVersion=$(VERSION) -Drevision=$(VERSION) -DpackageRevision=$(PACKAGE_VERSION) -Delasticsearch.version=$(ES_VERSION)
 
 .PHONY clean:
 clean: deps-build
-	mvn --settings=$(MAVEN_SETTINGS_XML) clean
+	mvn clean
