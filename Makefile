@@ -36,7 +36,7 @@ deps-packages:
 
 .PHONY build:
 build: deps-build
-	mvn package -Delasticsearch.version=$(ES_VERSION)
+	mvn compile -Delasticsearch.version=$(ES_VERSION)
 
 .PHONY tests:
 tests: deps-build

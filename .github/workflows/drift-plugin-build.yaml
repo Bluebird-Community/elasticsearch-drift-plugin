@@ -42,7 +42,7 @@ jobs:
           - 7.17.28
     runs-on: ubuntu-latest
     container:
-      image: quay.io/bluebird/java-builder:0.1.2.jdk-17.b2
+      image: quay.io/bluebird/java-builder:ubuntu.0.1.5.jdk-17.b21
     steps:
       - uses: actions/checkout@v4
       - name: Add workspace to git safe.directory
