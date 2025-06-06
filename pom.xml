@@ -15,7 +15,7 @@
     <version>${revision}</version>
     <packaging>pom</packaging>
 
-    <name>Main</name>
+    <name>Elasticsearch Drift Plugin</name>
     <description>Aggregate function plugin for Elasticsearch</description>
     <url>https://github.com/bluebird-community/elasticsearch-drift-plugin</url>
 
