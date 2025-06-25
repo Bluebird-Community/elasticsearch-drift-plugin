@@ -333,8 +333,8 @@
                 <version>1.7.0</version>
                 <extensions>true</extensions>
                 <configuration>
-                    <serverId>ossrh</serverId>
-                    <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+                    <serverId>bluebird</serverId>
+                    <nexusUrl>https://repo.maven.bluebirdops.org/releases</nexusUrl>
                     <autoReleaseAfterClose>true</autoReleaseAfterClose>
                 </configuration>
             </plugin>
