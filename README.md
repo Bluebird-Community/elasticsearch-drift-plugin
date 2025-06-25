@@ -1,20 +1,19 @@
-# Elasticsearch Drift Plugin [![drift-plugin-build](https://github.com/Bluebird-Community/elasticsearch-drift-plugin/actions/workflows/drift-plugin-build.yaml/badge.svg)](https://github.com/Bluebird-Community/elasticsearch-drift-plugin/actions/workflows/drift-plugin-build.yaml) 
+[![drift-plugin-build](https://github.com/Bluebird-Community/elasticsearch-drift-plugin/actions/workflows/drift-plugin-build.yaml/badge.svg)](https://github.com/Bluebird-Community/elasticsearch-drift-plugin/actions/workflows/drift-plugin-build.yaml) [![Hosted By: Cloudsmith](https://img.shields.io/badge/OSS%20hosting%20by-cloudsmith-blue?logo=cloudsmith&style=flat-square)](https://cloudsmith.io/~bluebird/repos/common/packages/)
+
+# Elasticsearch Drift Plugin
 
 Time series aggregation for flow records.
-
-| Elasticsearch |
-|---------------|
-| 7.6.[0-3]     |
-| 7.10.[0-2]    |
-| 7.16.[0-3]    |
-| 7.17.[0-26]   |
-
+Supported Elasticsearch versions:
+* 7.17.x
+* 8.17.x
+* 8.18.x
+ 
 ## Overview
 
 This plugin provides a new aggregation function `proportional_sum` that can be used to:
 
 1. Group documents that contain a date range into multiple buckets
-1. Calculate a sum on a per bucket basis using a ratio that is proportional to the range of time in which the document spent in that bucket.
+2. Calculate a sum on a per bucket basis using a ratio that is proportional to the range of time in which the document spent in that bucket.
 
 This aggregation function behaves like a hybrid of both the `Metrics` and `Bucket` type aggregations since we both create buckets and calculate a new metric.
 
@@ -24,34 +23,32 @@ This aggregation function behaves like a hybrid of both the `Metrics` and `Bucke
 
 Install the package repository:
 ```bash
-sudo yum install https://yum.opennms.org/repofiles/opennms-repo-stable-rhel7.noarch.rpm
-sudo rpm --import https://yum.opennms.org/OPENNMS-GPG-KEY
+curl -1sLf 'https://dl.cloudsmith.io/public/bluebird/common/setup.deb.sh' | sudo -E bash
 ```
 
-Install the package:
+Install the latest package:
 ```bash
-sudo yum install elasticsearch-drift-plugin
+sudo dnf install elasticsearch-drift-plugin
 ```
+
+> [!TIP]
+> You can install a specific version using -x.y.z, e.g. elasticsearch-drift-plugin-8.17.4
 
 ### Debian
 
-Create a new apt source file (eg: `/etc/apt/sources.list.d/opennms.list`), and add the following 2 lines:
+Install the package repository:
 ```bash
-deb https://debian.opennms.org stable main
-deb-src https://debian.opennms.org stable main
+curl -1sLf 'https://dl.cloudsmith.io/public/bluebird/common/setup.rpm.sh' | sudo -E bash
 ```
 
-Import the packages' authentication key with the following command:
+Install the latest package:
 ```bash
-wget -O - https://debian.opennms.org/OPENNMS-GPG-KEY | sudo apt-key add -
+sudo apt install elasticsearch-drift-plugin
 ```
 
-Install the package:
-```bash
-sudo apt-get update
-sudo apt-get install elasticsearch-drift-plugin
-```
-
+> [!TIP]
+> You can install a specific version using -x.y.z, e.g. elasticsearch-drift-plugin=8.17.4
+> 
 ## Use Case
 
 We are interested in generating time series for Netflow records stored in Elasticsearch.
@@ -183,12 +180,11 @@ Checkout the branch you want to build.
 
 Requirements:
 
-* OpenJDK 11 or 17
+* OpenJDK 17
 * Packages are built with [fpm](https://fpm.readthedocs.io/en/v1.7.0/intro.html) and needs to be installed
 
 ```bash
 git clone https://github.com/Bluebird-Community/elasticsearch-drift-plugin.git
-git checkout -b es-7.17.x origin/es-7.17.x
 ```
 
 To compile the plugin run:
@@ -207,13 +203,13 @@ The ES_VERSION needs to match your pom build dependency version to indicate user
 The package version is just a increasing number which identifies the package version release.
 
 ```bash
- make ES_VERSION=7.17.26 PACKAGE_VERSION=0 packages
+ make ES_VERSION=8.18.3 PACKAGE_VERSION=0 packages
 
  ```
-Next, ensure setup an Elasticsearch instance using the same version that is defined in the `pom.xml`.
+Next, ensure set up an Elasticsearch instance using the same version that is defined in the `pom.xml`.
 The version must match exactly, otherwise Elasticsearch will refuse to start.
 
 Install the plugin using:
 ```
-/usr/share/elasticsearch/bin/elasticsearch-plugin install file:///path/to/elasticsearch-drift/plugin/target/releases/elasticsearch-drift-plugin-7.17.26-2.0.6.zip
+/usr/share/elasticsearch/bin/elasticsearch-plugin install file:///path/to/elasticsearch-drift/plugin/target/releases/elasticsearch-drift-plugin-8.18.32-2.1.0.zip
 ```

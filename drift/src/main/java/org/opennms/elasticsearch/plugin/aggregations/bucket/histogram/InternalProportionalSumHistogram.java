@@ -22,22 +22,23 @@ import org.apache.lucene.util.CollectionUtil;
 import org.apache.lucene.util.PriorityQueue;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
-import org.elasticsearch.common.rounding.Rounding;
+import org.elasticsearch.common.Rounding;
 import org.elasticsearch.search.DocValueFormat;
-import org.elasticsearch.search.aggregations.Aggregations;
 import org.elasticsearch.search.aggregations.BucketOrder;
 import org.elasticsearch.search.aggregations.InternalAggregation;
 import org.elasticsearch.search.aggregations.InternalAggregations;
 import org.elasticsearch.search.aggregations.InternalMultiBucketAggregation;
 import org.elasticsearch.search.aggregations.InternalOrder;
+import org.elasticsearch.search.aggregations.AggregatorReducer;
+import org.elasticsearch.search.aggregations.AggregationReduceContext;
 import org.elasticsearch.search.aggregations.KeyComparable;
 import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation;
 import org.elasticsearch.search.aggregations.bucket.histogram.Histogram;
 import org.elasticsearch.search.aggregations.bucket.histogram.HistogramFactory;
 import org.elasticsearch.search.aggregations.bucket.histogram.LongBounds;
 import org.elasticsearch.xcontent.XContentBuilder;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
+import java.time.Instant;
+import java.time.ZoneId;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -105,7 +106,6 @@ public final class InternalProportionalSumHistogram extends InternalMultiBucketA
             return Objects.hash(getClass(), key, docCount, aggregations, value);
         }
 
-        @Override
         public void writeTo(StreamOutput out) throws IOException {
             out.writeLong(key);
             out.writeVLong(docCount);
@@ -120,7 +120,7 @@ public final class InternalProportionalSumHistogram extends InternalMultiBucketA
 
         @Override
         public Object getKey() {
-            return new DateTime(key, DateTimeZone.UTC);
+            return Instant.ofEpochMilli(key);
         }
 
         @Override
@@ -129,11 +129,11 @@ public final class InternalProportionalSumHistogram extends InternalMultiBucketA
         }
 
         @Override
-        public Aggregations getAggregations() {
+        public InternalAggregations getAggregations() {
             return aggregations;
         }
 
-        Bucket reduce(List<Bucket> buckets, ReduceContext context) {
+        Bucket reduce(List<Bucket> buckets, AggregationReduceContext context) {
             List<InternalAggregations> aggregations = new ArrayList<>(buckets.size());
             long docCount = 0;
             double value = 0;
@@ -148,7 +148,6 @@ public final class InternalProportionalSumHistogram extends InternalMultiBucketA
             return new InternalProportionalSumHistogram.Bucket(key, docCount, value, keyed, format, aggs);
         }
 
-        @Override
         public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
             String keyAsString = format.format(key).toString();
             if (keyed) {
@@ -203,13 +202,13 @@ public final class InternalProportionalSumHistogram extends InternalMultiBucketA
         }
 
         EmptyBucketInfo(StreamInput in) throws IOException {
-            rounding = Rounding.Streams.read(in);
+            rounding = Rounding.read(in);
             subAggregations = InternalAggregations.readFrom(in);
             bounds = in.readOptionalWriteable(LongBounds::new);
         }
 
         void writeTo(StreamOutput out) throws IOException {
-            Rounding.Streams.write(rounding, out);
+            rounding.writeTo(out);
             subAggregations.writeTo(out);
             out.writeOptionalWriteable(bounds);
         }
@@ -259,7 +258,7 @@ public final class InternalProportionalSumHistogram extends InternalMultiBucketA
      */
     public InternalProportionalSumHistogram(StreamInput in) throws IOException {
         super(in);
-        order = InternalOrder.Streams.readHistogramOrder(in, false);
+        order = InternalOrder.Streams.readHistogramOrder(in);
         minDocCount = in.readVLong();
         if (minDocCount == 0) {
             emptyBucketInfo = new EmptyBucketInfo(in);
@@ -269,12 +268,12 @@ public final class InternalProportionalSumHistogram extends InternalMultiBucketA
         offset = in.readLong();
         format = in.readNamedWriteable(DocValueFormat.class);
         keyed = in.readBoolean();
-        buckets = in.readList(stream -> new Bucket(stream, keyed, format));
+        buckets = in.readCollectionAsList(stream -> new Bucket(stream, keyed, format));
     }
 
     @Override
     protected void doWriteTo(StreamOutput out) throws IOException {
-        InternalOrder.Streams.writeHistogramOrder(order, out, false);
+        InternalOrder.Streams.writeHistogramOrder(order, out);
         out.writeVLong(minDocCount);
         if (minDocCount == 0) {
             emptyBucketInfo.writeTo(out);
@@ -282,7 +281,7 @@ public final class InternalProportionalSumHistogram extends InternalMultiBucketA
         out.writeLong(offset);
         out.writeNamedWriteable(format);
         out.writeBoolean(keyed);
-        out.writeList(buckets);
+        out.writeCollection(buckets, (o, b) -> b.writeTo(o));
     }
 
     @Override
@@ -326,8 +325,7 @@ public final class InternalProportionalSumHistogram extends InternalMultiBucketA
      * Reduce a list of same-keyed buckets (from multiple shards) to a single bucket. This
      * requires all buckets to have the same key.
      */
-    @Override
-    protected Bucket reduceBucket(List<Bucket> buckets, ReduceContext context) {
+    protected Bucket reduceBucket(List<Bucket> buckets, AggregationReduceContext context) {
         List<InternalAggregations> aggregations = new ArrayList<>(buckets.size());
         long docCount = 0;
         double value = 0;
@@ -354,7 +352,7 @@ public final class InternalProportionalSumHistogram extends InternalMultiBucketA
 
     }
 
-    private List<Bucket> reduceBuckets(List<InternalAggregation> aggregations, ReduceContext reduceContext) {
+    private List<Bucket> reduceBuckets(List<InternalAggregation> aggregations, AggregationReduceContext reduceContext) {
 
         final PriorityQueue<IteratorAndCurrent> pq = new PriorityQueue<IteratorAndCurrent>(aggregations.size()) {
             @Override
@@ -417,7 +415,7 @@ public final class InternalProportionalSumHistogram extends InternalMultiBucketA
         return reducedBuckets;
     }
 
-    private void addEmptyBuckets(List<Bucket> list, ReduceContext reduceContext) {
+    private void addEmptyBuckets(List<Bucket> list, AggregationReduceContext reduceContext) {
         Bucket lastBucket = null;
         LongBounds bounds = emptyBucketInfo.bounds;
         ListIterator<Bucket> iter = list.listIterator();
@@ -480,7 +478,23 @@ public final class InternalProportionalSumHistogram extends InternalMultiBucketA
     }
 
     @Override
-    public InternalAggregation reduce(List<InternalAggregation> aggregations, ReduceContext reduceContext) {
+    public AggregatorReducer getLeaderReducer(AggregationReduceContext reduceContext, int size) {
+        return new AggregatorReducer() {
+            final List<InternalAggregation> aggregations = new ArrayList<>(size);
+
+            @Override
+            public void accept(InternalAggregation aggregation) {
+                aggregations.add(aggregation);
+            }
+
+            @Override
+            public InternalAggregation get() {
+                return doReduce(aggregations, reduceContext);
+            }
+        };
+    }
+
+    private InternalAggregation doReduce(List<InternalAggregation> aggregations, AggregationReduceContext reduceContext) {
         List<Bucket> reducedBuckets = reduceBuckets(aggregations, reduceContext);
 
         // adding empty buckets if needed
@@ -526,17 +540,14 @@ public final class InternalProportionalSumHistogram extends InternalMultiBucketA
 
     // HistogramFactory method impls
 
-    @Override
     public Number getKey(MultiBucketsAggregation.Bucket bucket) {
         return ((Bucket) bucket).key;
     }
 
-    @Override
     public Number nextKey(Number key) {
         return emptyBucketInfo.rounding.nextRoundingValue(key.longValue() - offset) + offset;
     }
 
-    @Override
     public InternalAggregation createAggregation(List<MultiBucketsAggregation.Bucket> buckets) {
         // convert buckets to the right type
         List<Bucket> buckets2 = new ArrayList<>(buckets.size());

@@ -1,8 +1,8 @@
 /*******************************************************************************
  * This file is part of OpenNMS(R).
  *
- * Copyright (C) 2018 The OpenNMS Group, Inc.
- * OpenNMS(R) is Copyright (C) 1999-2018 The OpenNMS Group, Inc.
+ * Copyright (C) 2025 The OpenNMS Group, Inc.
+ * OpenNMS(R) is Copyright (C) 1999-2025 The OpenNMS Group, Inc.
  *
  * OpenNMS(R) is a registered trademark of The OpenNMS Group, Inc.
  *
@@ -32,8 +32,7 @@ import java.io.IOException;
 import java.time.ZoneId;
 import java.util.Map;
 
-import org.elasticsearch.common.joda.Joda;
-import org.elasticsearch.common.rounding.Rounding;
+import org.elasticsearch.common.Rounding;
 import org.elasticsearch.index.mapper.DateFieldMapper;
 import org.elasticsearch.search.DocValueFormat;
 import org.elasticsearch.search.aggregations.Aggregator;
@@ -105,7 +104,7 @@ public class ProportionalSumAggregatorFactory extends MultiValuesSourceAggregato
         // entry in the buckets
         DocValueFormat effectiveFormat = format;
         if (format == null || format == DocValueFormat.RAW) {
-            effectiveFormat = new DocValueFormat.DateTime(Joda.getStrictStandardDateFormatter(), ZoneId.of("UTC"), DateFieldMapper.Resolution.MILLISECONDS);
+            effectiveFormat = DocValueFormat.RAW;
         }
 
         return new ProportionalSumAggregator(name, factories, rounding, effectiveOffset, order, keyed, minDocCount, extendedBounds, configs,

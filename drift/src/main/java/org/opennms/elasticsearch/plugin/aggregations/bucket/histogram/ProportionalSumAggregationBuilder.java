@@ -29,10 +29,8 @@ import java.util.Objects;
 
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
-import org.elasticsearch.common.joda.Joda;
-import org.elasticsearch.common.rounding.DateTimeUnit;
-import org.elasticsearch.common.rounding.Rounding;
-import org.elasticsearch.common.time.DateMathParser;
+import org.elasticsearch.TransportVersion;
+import org.elasticsearch.common.Rounding;
 import org.elasticsearch.core.TimeValue;
 import org.elasticsearch.search.aggregations.support.AggregationContext;
 import org.elasticsearch.xcontent.ObjectParser;
@@ -58,7 +56,7 @@ import org.elasticsearch.search.aggregations.support.ValueType;
 import org.elasticsearch.search.aggregations.support.ValuesSourceConfig;
 import org.elasticsearch.search.aggregations.support.ValuesSourceType;
 import org.elasticsearch.xcontent.ParseField;
-import org.joda.time.DateTimeZone;
+import java.time.ZoneId;
 
 
 /**
@@ -72,32 +70,29 @@ import org.joda.time.DateTimeZone;
  */
 public class ProportionalSumAggregationBuilder extends MultiValuesSourceAggregationBuilder<ProportionalSumAggregationBuilder> {
     public static final String NAME = "proportional_sum";
-    private static DateMathParser EPOCH_MILLIS_PARSER = Joda.forPattern("epoch_millis").toDateMathParser();
 
     private static ParseField START_FIELD = new ParseField("start");
     private static ParseField END_FIELD = new ParseField("end");
     private static ParseField FIELDS_FIELD = new ParseField("fields");
 
-    public static final Map<String, DateTimeUnit> DATE_FIELD_UNITS;
+    public static final Map<String, Rounding.DateTimeUnit> DATE_FIELD_UNITS;
 
     static {
-        Map<String, DateTimeUnit> dateFieldUnits = new HashMap<>();
-        dateFieldUnits.put("year", DateTimeUnit.YEAR_OF_CENTURY);
-        dateFieldUnits.put("1y", DateTimeUnit.YEAR_OF_CENTURY);
-        dateFieldUnits.put("quarter", DateTimeUnit.QUARTER);
-        dateFieldUnits.put("1q", DateTimeUnit.QUARTER);
-        dateFieldUnits.put("month", DateTimeUnit.MONTH_OF_YEAR);
-        dateFieldUnits.put("1M", DateTimeUnit.MONTH_OF_YEAR);
-        dateFieldUnits.put("week", DateTimeUnit.WEEK_OF_WEEKYEAR);
-        dateFieldUnits.put("1w", DateTimeUnit.WEEK_OF_WEEKYEAR);
-        dateFieldUnits.put("day", DateTimeUnit.DAY_OF_MONTH);
-        dateFieldUnits.put("1d", DateTimeUnit.DAY_OF_MONTH);
-        dateFieldUnits.put("hour", DateTimeUnit.HOUR_OF_DAY);
-        dateFieldUnits.put("1h", DateTimeUnit.HOUR_OF_DAY);
-        dateFieldUnits.put("minute", DateTimeUnit.MINUTES_OF_HOUR);
-        dateFieldUnits.put("1m", DateTimeUnit.MINUTES_OF_HOUR);
-        dateFieldUnits.put("second", DateTimeUnit.SECOND_OF_MINUTE);
-        dateFieldUnits.put("1s", DateTimeUnit.SECOND_OF_MINUTE);
+        Map<String, Rounding.DateTimeUnit> dateFieldUnits = new HashMap<>();
+        dateFieldUnits.put("year", Rounding.DateTimeUnit.YEAR_OF_CENTURY);
+        dateFieldUnits.put("1y", Rounding.DateTimeUnit.YEAR_OF_CENTURY);
+        dateFieldUnits.put("month", Rounding.DateTimeUnit.MONTH_OF_YEAR);
+        dateFieldUnits.put("1M", Rounding.DateTimeUnit.MONTH_OF_YEAR);
+        dateFieldUnits.put("week", Rounding.DateTimeUnit.WEEK_OF_WEEKYEAR);
+        dateFieldUnits.put("1w", Rounding.DateTimeUnit.WEEK_OF_WEEKYEAR);
+        dateFieldUnits.put("day", Rounding.DateTimeUnit.DAY_OF_MONTH);
+        dateFieldUnits.put("1d", Rounding.DateTimeUnit.DAY_OF_MONTH);
+        dateFieldUnits.put("hour", Rounding.DateTimeUnit.HOUR_OF_DAY);
+        dateFieldUnits.put("1h", Rounding.DateTimeUnit.HOUR_OF_DAY);
+        dateFieldUnits.put("minute", Rounding.DateTimeUnit.MINUTES_OF_HOUR);
+        dateFieldUnits.put("1m", Rounding.DateTimeUnit.MINUTES_OF_HOUR);
+        dateFieldUnits.put("second", Rounding.DateTimeUnit.SECOND_OF_MINUTE);
+        dateFieldUnits.put("1s", Rounding.DateTimeUnit.SECOND_OF_MINUTE);
         DATE_FIELD_UNITS = unmodifiableMap(dateFieldUnits);
     }
 
@@ -187,7 +182,7 @@ public class ProportionalSumAggregationBuilder extends MultiValuesSourceAggregat
     /** Read from a stream, for internal use only. */
     public ProportionalSumAggregationBuilder(StreamInput in) throws IOException {
         super(in);
-        order = InternalOrder.Streams.readHistogramOrder(in, true);
+        order = InternalOrder.Streams.readHistogramOrder(in);
         keyed = in.readBoolean();
         minDocCount = in.readVLong();
         interval = in.readLong();
@@ -201,7 +196,7 @@ public class ProportionalSumAggregationBuilder extends MultiValuesSourceAggregat
 
     @Override
     protected void innerWriteTo(StreamOutput out) throws IOException {
-        InternalOrder.Streams.writeHistogramOrder(order, out, true);
+        InternalOrder.Streams.writeHistogramOrder(order, out);
         out.writeBoolean(keyed);
         out.writeVLong(minDocCount);
         out.writeLong(interval);
@@ -235,7 +230,7 @@ public class ProportionalSumAggregationBuilder extends MultiValuesSourceAggregat
     }
 
     /** Get the current end in milliseconds that is set on this builder. */
-    public Long end() { return start; }
+    public Long end() { return end; }
 
     /** Set the end on this builder, which is a number of milliseconds, and
      *  return the builder so that calls can be chained. */
@@ -424,14 +419,19 @@ public class ProportionalSumAggregationBuilder extends MultiValuesSourceAggregat
         return NAME;
     }
 
+    @Override
+    public TransportVersion getMinimalSupportedVersion() {
+        return TransportVersion.current();
+    }
+
     /*
      * NOTE: this can't be done in rewrite() because the timezone is then also used on the
      * coordinating node in order to generate missing buckets, which may cross a transition
      * even though data on the shards doesn't.
      */
-    DateTimeZone rewriteTimeZone(AggregationContext context) throws IOException {
+    ZoneId rewriteTimeZone(AggregationContext context) throws IOException {
 
-        final DateTimeZone tz = null; // timeZone();
+        final ZoneId tz = null; // timeZone();
         /*
         if (field() != null &&
                 tz != null &&
@@ -475,7 +475,7 @@ public class ProportionalSumAggregationBuilder extends MultiValuesSourceAggregat
                         // All values in this reader have the same offset despite daylight saving times.
                         // This is very common for location-based timezones such as Europe/Paris in
                         // combination with time-based indices.
-                        return DateTimeZone.forOffsetMillis(tz.getOffset(anyInstant));
+                        return ZoneId.of(tz.getId());
                     }
                 }
             }
@@ -490,9 +490,9 @@ public class ProportionalSumAggregationBuilder extends MultiValuesSourceAggregat
                                                             DocValueFormat format,
                                                             AggregatorFactory parent, Builder subFactoriesBuilder) throws IOException {
         // HACK: No timeZone() present in MultiValuesSourceAggregationBuilder, but it is present on the ValuesSourceAggregationBuilder
-        final DateTimeZone tz = null; // timeZone();
+        final ZoneId tz = null; // timeZone();
         final Rounding rounding = createRounding(tz);
-        final DateTimeZone rewrittenTimeZone = rewriteTimeZone(context);
+        final ZoneId rewrittenTimeZone = rewriteTimeZone(context);
         final Rounding shardRounding;
         if (tz == rewrittenTimeZone) {
             shardRounding = rounding;
@@ -513,7 +513,7 @@ public class ProportionalSumAggregationBuilder extends MultiValuesSourceAggregat
      *  {@code null} then it means that the interval is expressed as a fixed
      *  {@link TimeValue} and may be accessed via
      *  {@link #getIntervalAsTimeValue()}. */
-    private DateTimeUnit getIntervalAsDateTimeUnit() {
+    private Rounding.DateTimeUnit getIntervalAsDateTimeUnit() {
         if (dateHistogramInterval != null) {
             return DATE_FIELD_UNITS.get(dateHistogramInterval.toString());
         }
@@ -532,9 +532,9 @@ public class ProportionalSumAggregationBuilder extends MultiValuesSourceAggregat
         }
     }
 
-    private Rounding createRounding(DateTimeZone timeZone) {
+    private Rounding createRounding(ZoneId timeZone) {
         Rounding.Builder tzRoundingBuilder;
-        DateTimeUnit intervalAsUnit = getIntervalAsDateTimeUnit();
+        Rounding.DateTimeUnit intervalAsUnit = getIntervalAsDateTimeUnit();
         if (intervalAsUnit != null) {
             tzRoundingBuilder = Rounding.builder(intervalAsUnit);
         } else {
@@ -559,7 +559,7 @@ public class ProportionalSumAggregationBuilder extends MultiValuesSourceAggregat
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), order, keyed, minDocCount, interval, dateHistogramInterval, minDocCount, extendedBounds, start, end);
+        return Objects.hash(super.hashCode(), order, keyed, interval, dateHistogramInterval, minDocCount, extendedBounds, start, end);
     }
 
     @Override

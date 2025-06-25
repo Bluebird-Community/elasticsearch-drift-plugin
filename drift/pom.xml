@@ -16,20 +16,13 @@
     </parent>
 
     <properties>
-        <elasticsearch.version>${elasticsearch.version.default}</elasticsearch.version>
-        <elasticsearch.version.default>7.17.22</elasticsearch.version.default>
+        <elasticsearch.version>8.18.2</elasticsearch.version>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>org.elasticsearch</groupId>
             <artifactId>elasticsearch</artifactId>
-            <version>${elasticsearch.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.elasticsearch.plugin</groupId>
-            <artifactId>aggs-matrix-stats-client</artifactId>
             <version>${elasticsearch.version}</version>
             <scope>provided</scope>
         </dependency>
@@ -55,6 +48,14 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.14.0</version>
+                <configuration>
+                    <release>17</release>
+                </configuration>
+            </plugin>
             <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>
             </plugin>
