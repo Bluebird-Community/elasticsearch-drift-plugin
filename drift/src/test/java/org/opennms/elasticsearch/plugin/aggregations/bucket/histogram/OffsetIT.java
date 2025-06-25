@@ -1,8 +1,8 @@
 /*******************************************************************************
  * This file is part of OpenNMS(R).
  *
- * Copyright (C) 2018 The OpenNMS Group, Inc.
- * OpenNMS(R) is Copyright (C) 1999-2018 The OpenNMS Group, Inc.
+ * Copyright (C) 2025 The OpenNMS Group, Inc.
+ * OpenNMS(R) is Copyright (C) 1999-2025 The OpenNMS Group, Inc.
  *
  * OpenNMS(R) is a registered trademark of The OpenNMS Group, Inc.
  *
@@ -28,7 +28,6 @@
 
 package org.opennms.elasticsearch.plugin.aggregations.bucket.histogram;
 
-import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertSearchResponse;
 import static org.elasticsearch.xcontent.XContentFactory.jsonBuilder;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.Matchers.closeTo;
@@ -38,6 +37,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
@@ -47,8 +47,8 @@ import org.elasticsearch.search.aggregations.BucketOrder;
 import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramInterval;
 import org.elasticsearch.search.aggregations.bucket.histogram.Histogram;
 import org.elasticsearch.test.ESIntegTestCase;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
+import java.time.Instant;
+import java.time.ZoneId;
 import org.junit.Test;
 import org.opennms.elasticsearch.plugin.DriftPlugin;
 
@@ -74,12 +74,12 @@ public class OffsetIT extends ESIntegTestCase {
         ensureSearchable();
     }
 
-    private DateTime date(int hourOfDay, int minuteOfHour) {
-        return new DateTime(2018, 2, 12, hourOfDay, minuteOfHour, DateTimeZone.UTC);
+    private Instant date(int hourOfDay, int minuteOfHour) {
+        return Instant.parse(String.format(Locale.ROOT, "2018-02-12T%02d:%02d:00Z", hourOfDay, minuteOfHour));
     }
 
-    private DateTime date(String date) {
-        return DateFieldMapper.DEFAULT_DATE_TIME_FORMATTER.parseJoda(date);
+    private Instant date(String date) {
+        return Instant.parse(date);
     }
 
     private IndexRequestBuilder indexDoc(int hourOfDay, int minuteOfHour, int value) throws Exception {
@@ -87,10 +87,10 @@ public class OffsetIT extends ESIntegTestCase {
     }
 
     private IndexRequestBuilder indexDoc(int startHourOfDay, int startMinuteOfHour, int endHourOfDay, int endMinuteOfHour, int value) throws Exception {
-        final DateTime start = date(startHourOfDay, startMinuteOfHour);
-        final DateTime end = date(endHourOfDay, endMinuteOfHour);
+        final Instant start = date(startHourOfDay, startMinuteOfHour);
+        final Instant end = date(endHourOfDay, endMinuteOfHour);
 
-        return client().prepareIndex("idx", "type").setSource(jsonBuilder()
+        return client().prepareIndex("idx").setSource(jsonBuilder()
                 .startObject()
                 .field("value", value)
                 .field("constant", 1)
@@ -102,33 +102,36 @@ public class OffsetIT extends ESIntegTestCase {
 
     @Test
     public void testOffsetCalculation() {
-        DateTime start = new DateTime(2018, 2, 12, 11, 10, DateTimeZone.UTC);
-        DateTime end = new DateTime(2018, 2, 12, 11, 40, DateTimeZone.UTC);
+        Instant start = Instant.parse("2018-02-12T11:10:00Z");
+        Instant end = Instant.parse("2018-02-12T11:40:00Z");
 
         SearchResponse response = client().prepareSearch("idx")
                 .setSize(0)
                 .addAggregation(new ProportionalSumAggregationBuilder("histo")
                         .fields(Arrays.asList("start", "end", "value", "interval"))
                         .dateHistogramInterval(DateHistogramInterval.MONTH)
-                        .start(start.getMillis())
-                        .end(end.getMillis())
+                        .start(start.toEpochMilli())
+                        .end(end.toEpochMilli())
                         .interval(30 * 1000)
                         .order(BucketOrder.key(true))
                 )
                 .execute().actionGet();
+        
+        try {
 
-        assertSearchResponse(response);
+            Histogram histo = response.getAggregations().get("histo");
+            assertThat(histo, notNullValue());
+            assertThat(histo.getName(), equalTo("histo"));
+            List<? extends HistogramBucketWithValue> buckets = (List<? extends HistogramBucketWithValue>) histo.getBuckets();
+            assertThat(buckets.size(), equalTo(1));
 
-        Histogram histo = response.getAggregations().get("histo");
-        assertThat(histo, notNullValue());
-        assertThat(histo.getName(), equalTo("histo"));
-        List<? extends HistogramBucketWithValue> buckets = (List<? extends HistogramBucketWithValue>) histo.getBuckets();
-        assertThat(buckets.size(), equalTo(1));
-
-        assertThat(buckets.get(0).getDocCount(), equalTo(1L));
-        // The bucket key should match the given start
-        assertThat(buckets.get(0).getKey(), equalTo(start));
-        assertThat(buckets.get(0).getValue(), closeTo(1.00d, 0.01));
+            assertThat(buckets.get(0).getDocCount(), equalTo(1L));
+            // The bucket key should match the given start
+            assertThat(buckets.get(0).getKey(), equalTo(start));
+            assertThat(buckets.get(0).getValue(), closeTo(1.00d, 0.01));
+        } finally {
+            response.decRef();
+        }
     }
 
 }

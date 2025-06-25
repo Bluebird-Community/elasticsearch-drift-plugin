@@ -2,7 +2,7 @@
 
 SHELL               := /bin/bash -o nounset -o pipefail -o errexit
 MAVEN_SETTINGS_XML  ?= ""
-ES_VERSION          := 7.17.28
+ES_VERSION          := 8.18.3
 ROOT_CHECK          := $(shell if [ "$$(id -u)" = "0" ]; then echo "root"; else echo "not_root"; fi)
 PACKAGE_PROFILE     ?= build.fpm.usr.local
 PACKAGE_VERSION     ?= 0

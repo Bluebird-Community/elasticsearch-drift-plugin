@@ -1,8 +1,8 @@
 /*******************************************************************************
  * This file is part of OpenNMS(R).
  *
- * Copyright (C) 2018 The OpenNMS Group, Inc.
- * OpenNMS(R) is Copyright (C) 1999-2018 The OpenNMS Group, Inc.
+ * Copyright (C) 2025 The OpenNMS Group, Inc.
+ * OpenNMS(R) is Copyright (C) 1999-2025 The OpenNMS Group, Inc.
  *
  * OpenNMS(R) is a registered trademark of The OpenNMS Group, Inc.
  *
@@ -28,7 +28,6 @@
 
 package org.opennms.elasticsearch.plugin.aggregations.bucket.histogram;
 
-import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertSearchResponse;
 import static org.elasticsearch.xcontent.XContentFactory.jsonBuilder;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.Matchers.closeTo;
@@ -38,6 +37,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
@@ -47,8 +47,8 @@ import org.elasticsearch.search.aggregations.BucketOrder;
 import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramInterval;
 import org.elasticsearch.search.aggregations.bucket.histogram.Histogram;
 import org.elasticsearch.test.ESIntegTestCase;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
+import java.time.Instant;
+import java.time.ZoneId;
 import org.junit.Test;
 import org.opennms.elasticsearch.plugin.DriftPlugin;
 
@@ -80,12 +80,12 @@ public class ProportionalSumAggregatorIT extends ESIntegTestCase {
         ensureSearchable();
     }
 
-    private DateTime date(int month, int day) {
-        return new DateTime(2012, month, day, 0, 0, DateTimeZone.UTC);
+    private Instant date(int month, int day) {
+        return Instant.parse(String.format(Locale.ROOT, "2012-%02d-%02dT00:00:00Z", month, day));
     }
 
-    private DateTime date(String date) {
-        return DateFieldMapper.DEFAULT_DATE_TIME_FORMATTER.parseJoda(date);
+    private Instant date(String date) {
+        return Instant.parse(date);
     }
 
     private IndexRequestBuilder indexDoc(int month, int day, int value) throws Exception {
@@ -93,10 +93,10 @@ public class ProportionalSumAggregatorIT extends ESIntegTestCase {
     }
 
     private IndexRequestBuilder indexDoc(int startMonth, int startDay, int endMonth, int endDay, int value) throws Exception {
-        final DateTime start = date(startMonth, startDay);
-        final DateTime end = date(endMonth, endDay);
+        final Instant start = date(startMonth, startDay);
+        final Instant end = date(endMonth, endDay);
 
-        return client().prepareIndex("idx", "type").setSource(jsonBuilder()
+        return client().prepareIndex("idx").setSource(jsonBuilder()
                 .startObject()
                 .field("value", value)
                 .field("constant", 1)
@@ -112,50 +112,52 @@ public class ProportionalSumAggregatorIT extends ESIntegTestCase {
                 .addAggregation(new ProportionalSumAggregationBuilder("histo")
                         .fields(Arrays.asList("start","end","value"))
                         .dateHistogramInterval(DateHistogramInterval.MONTH)
-                        .start(new DateTime(2012, 1, 1, 0, 0, DateTimeZone.UTC).getMillis())
-                        .end(new DateTime(2012, 5, 1, 0, 0, DateTimeZone.UTC).getMillis())
+                        .start(Instant.parse("2012-01-01T00:00:00Z").toEpochMilli())
+                        .end(Instant.parse("2012-05-01T00:00:00Z").toEpochMilli())
                         .order(BucketOrder.key(true))
                 )
                 .execute().actionGet();
+        
+        try {
+            Histogram histo = response.getAggregations().get("histo");
+            assertThat(histo, notNullValue());
+            assertThat(histo.getName(), equalTo("histo"));
+            List<? extends HistogramBucketWithValue> buckets = (List<? extends HistogramBucketWithValue>) histo.getBuckets();
+            assertThat(buckets.size(), equalTo(4));
 
-        assertSearchResponse(response);
+            double totalSumFromBuckets = 0;
+            int i = 0;
+            for (HistogramBucketWithValue bucket : buckets) {
+                assertThat(bucket.getKey(), equalTo(Instant.parse(String.format(Locale.ROOT, "2012-%02d-01T00:00:00Z", i + 1))));
+                totalSumFromBuckets += bucket.getValue();
+                i++;
+            }
 
-        Histogram histo = response.getAggregations().get("histo");
-        assertThat(histo, notNullValue());
-        assertThat(histo.getName(), equalTo("histo"));
-        List<? extends HistogramBucketWithValue> buckets = (List<? extends HistogramBucketWithValue>) histo.getBuckets();
-        assertThat(buckets.size(), equalTo(4));
+            assertThat(totalSumFromBuckets, closeTo(34d, 0.01));
 
-        double totalSumFromBuckets = 0;
-        int i = 0;
-        for (HistogramBucketWithValue bucket : buckets) {
-            assertThat(bucket.getKey(), equalTo(new DateTime(2012, i + 1, 1, 0, 0, DateTimeZone.UTC)));
-            totalSumFromBuckets += bucket.getValue();
-            i++;
+            // start: Jan 2, end: Feb 3
+            // start: Feb 2, end: Mar 3
+            // start: Feb 15, end: Mar 16
+            // start: Mar 2, end: Apr 3
+            // start: Mar 15, end: Apr 16
+            // start: Mar 23, end: Apr 24
+            // start: Jan 1, end: Apr 23
+
+            // Jan tally: 2
+            // Feb tally: 4
+            // March tally: 6
+            // April tally: 4
+
+            assertThat(buckets.get(0).getDocCount(), equalTo(3L));
+            assertThat(buckets.get(0).getValue(), closeTo(9.58d, 0.01));
+            assertThat(buckets.get(1).getDocCount(), equalTo(4L));
+            assertThat(buckets.get(1).getValue(), closeTo(4.97d, 0.01));
+            assertThat(buckets.get(2).getDocCount(), equalTo(6L));
+            assertThat(buckets.get(2).getValue(), closeTo(11.37d, 0.01));
+            assertThat(buckets.get(3).getDocCount(), equalTo(4L));
+            assertThat(buckets.get(3).getValue(), closeTo(8.07d, 0.01));
+        } finally {
+            response.decRef();
         }
-
-        assertThat(totalSumFromBuckets, closeTo(34d, 0.01));
-
-        // start: Jan 2, end: Feb 3
-        // start: Feb 2, end: Mar 3
-        // start: Feb 15, end: Mar 16
-        // start: Mar 2, end: Apr 3
-        // start: Mar 15, end: Apr 16
-        // start: Mar 23, end: Apr 24
-        // start: Jan 1, end: Apr 23
-
-        // Jan tally: 2
-        // Feb tally: 4
-        // March tally: 6
-        // April tally: 4
-
-        assertThat(buckets.get(0).getDocCount(), equalTo(3L));
-        assertThat(buckets.get(0).getValue(), closeTo(9.58d, 0.01));
-        assertThat(buckets.get(1).getDocCount(), equalTo(4L));
-        assertThat(buckets.get(1).getValue(), closeTo(4.97d, 0.01));
-        assertThat(buckets.get(2).getDocCount(), equalTo(6L));
-        assertThat(buckets.get(2).getValue(), closeTo(11.37d, 0.01));
-        assertThat(buckets.get(3).getDocCount(), equalTo(4L));
-        assertThat(buckets.get(3).getValue(), closeTo(8.07d, 0.01));
     }
 }

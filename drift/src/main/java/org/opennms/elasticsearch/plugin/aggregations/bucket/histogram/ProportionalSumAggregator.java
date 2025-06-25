@@ -1,8 +1,8 @@
 /*******************************************************************************
  * This file is part of OpenNMS(R).
  *
- * Copyright (C) 2018 The OpenNMS Group, Inc.
- * OpenNMS(R) is Copyright (C) 1999-2018 The OpenNMS Group, Inc.
+ * Copyright (C) 2025 The OpenNMS Group, Inc.
+ * OpenNMS(R) is Copyright (C) 1999-2025 The OpenNMS Group, Inc.
  *
  * OpenNMS(R) is a registered trademark of The OpenNMS Group, Inc.
  *
@@ -33,16 +33,20 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.LongUnaryOperator;
+import java.util.function.IntFunction;
 
 import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.util.CollectionUtil;
-import org.elasticsearch.common.rounding.Rounding;
+import org.elasticsearch.common.Rounding;
 import org.elasticsearch.common.util.BigArrays;
 import org.elasticsearch.common.util.DoubleArray;
+import org.elasticsearch.common.util.LongArray;
 import org.elasticsearch.core.Releasables;
 import org.elasticsearch.index.fielddata.SortedNumericDoubleValues;
 import org.elasticsearch.search.DocValueFormat;
 import org.elasticsearch.search.aggregations.AggregationExecutionException;
+import org.elasticsearch.search.aggregations.AggregationExecutionContext;
 import org.elasticsearch.search.aggregations.Aggregator;
 import org.elasticsearch.search.aggregations.AggregatorFactories;
 import org.elasticsearch.search.aggregations.BucketOrder;
@@ -118,13 +122,13 @@ public class ProportionalSumAggregator extends BucketsAggregator {
     }
 
     @Override
-    public LeafBucketCollector getLeafCollector(LeafReaderContext ctx,
+    public LeafBucketCollector getLeafCollector(AggregationExecutionContext ctx,
                                                 final LeafBucketCollector sub) throws IOException {
         if (valuesSources == null) {
             return LeafBucketCollector.NO_OP_COLLECTOR;
         }
         final BigArrays bigArrays = context.bigArrays();
-        final OrderedValueReferences orderedValueReferences = new OrderedValueReferences(ctx, valuesSources, fieldNames);
+        final OrderedValueReferences orderedValueReferences = new OrderedValueReferences(ctx.getLeafReaderContext(), valuesSources, fieldNames);
         final SortedNumericDoubleValues[] values = orderedValueReferences.getValuesArray();
 
         return new LeafBucketCollectorBase(sub, values) {
@@ -253,23 +257,35 @@ public class ProportionalSumAggregator extends BucketsAggregator {
                 bucketOrdsToCollect[b++] = ordsEnum.ord();
             }
         }
-        InternalAggregations[] subAggregationResults = buildSubAggsForBuckets(bucketOrdsToCollect);
-
-        InternalAggregation[] results = new InternalAggregation[owningBucketOrds.length];
-        b = 0;
-        for (int ordIdx = 0; ordIdx < owningBucketOrds.length; ordIdx++) {
-            List<B> buckets = new ArrayList<>((int) bucketOrds.size());
-            LongKeyedBucketOrds.BucketOrdsEnum ordsEnum = bucketOrds.ordsEnum(owningBucketOrds[ordIdx]);
-            while(ordsEnum.next()) {
-                if (bucketOrdsToCollect[b] != ordsEnum.ord()) {
-                    throw new AggregationExecutionException("Iteration order of [" + bucketOrds + "] changed without mutating. ["
-                                                            + ordsEnum.ord() + "] should have been [" + bucketOrdsToCollect[b] + "]");
-                }
-                buckets.add(bucketBuilder.build(owningBucketOrds[ordIdx], ordsEnum.value(), bucketDocCount(ordsEnum.ord()), subAggregationResults[b++]));
+        LongArray bucketOrdsArray = context.bigArrays().newLongArray(bucketOrdsToCollect.length, false);
+        try {
+            for (int i = 0; i < bucketOrdsToCollect.length; i++) {
+                bucketOrdsArray.set(i, bucketOrdsToCollect[i]);
             }
-            results[ordIdx] = resultBuilder.build(owningBucketOrds[ordIdx], buckets);
+            IntFunction<InternalAggregations> subAggregationResultsFunc = buildSubAggsForBuckets(bucketOrdsArray);
+            InternalAggregations[] subAggregationResults = new InternalAggregations[bucketOrdsToCollect.length];
+            for (int i = 0; i < bucketOrdsToCollect.length; i++) {
+                subAggregationResults[i] = subAggregationResultsFunc.apply(i);
+            }
+
+            InternalAggregation[] results = new InternalAggregation[owningBucketOrds.length];
+            b = 0;
+            for (int ordIdx = 0; ordIdx < owningBucketOrds.length; ordIdx++) {
+                List<B> buckets = new ArrayList<>((int) bucketOrds.size());
+                LongKeyedBucketOrds.BucketOrdsEnum ordsEnum = bucketOrds.ordsEnum(owningBucketOrds[ordIdx]);
+                while(ordsEnum.next()) {
+                    if (bucketOrdsToCollect[b] != ordsEnum.ord()) {
+                        throw new AggregationExecutionException("Iteration order of [" + bucketOrds + "] changed without mutating. ["
+                                                                + ordsEnum.ord() + "] should have been [" + bucketOrdsToCollect[b] + "]");
+                    }
+                    buckets.add(bucketBuilder.build(owningBucketOrds[ordIdx], ordsEnum.value(), bucketDocCount(ordsEnum.ord()), subAggregationResults[b++]));
+                }
+                results[ordIdx] = resultBuilder.build(owningBucketOrds[ordIdx], buckets);
+            }
+            return results;
+        } finally {
+            Releasables.close(bucketOrdsArray);
         }
-        return results;
     }
 
     @FunctionalInterface
@@ -278,7 +294,15 @@ public class ProportionalSumAggregator extends BucketsAggregator {
     }
 
     @Override
-    public InternalAggregation[] buildAggregations(long[] owningBucketOrds) throws IOException {
+    public InternalAggregation[] buildAggregations(LongArray owningBucketOrds) throws IOException {
+        return buildAggregations(0, owningBucketOrds.size(), i -> owningBucketOrds.get(i));
+    }
+
+    public InternalAggregation[] buildAggregations(long owningBucketOrdStart, long owningBucketOrdEnd, LongUnaryOperator owningBucketOrdToGlobalOrd) throws IOException {
+        long[] owningBucketOrds = new long[(int)(owningBucketOrdEnd - owningBucketOrdStart)];
+        for (int i = 0; i < owningBucketOrds.length; i++) {
+            owningBucketOrds[i] = owningBucketOrdToGlobalOrd.applyAsLong(owningBucketOrdStart + i);
+        }
         return buildAggregationsForVariableBuckets(owningBucketOrds,
                 (owningBucketOrd, bucketValue, docCount, subAggregationResults) -> {
                     long idx = bucketOrds.find(owningBucketOrd, bucketValue);

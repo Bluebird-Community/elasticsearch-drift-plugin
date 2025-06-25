@@ -1,8 +1,8 @@
 /*******************************************************************************
  * This file is part of OpenNMS(R).
  *
- * Copyright (C) 2018 The OpenNMS Group, Inc.
- * OpenNMS(R) is Copyright (C) 1999-2018 The OpenNMS Group, Inc.
+ * Copyright (C) 2025 The OpenNMS Group, Inc.
+ * OpenNMS(R) is Copyright (C) 1999-2025 The OpenNMS Group, Inc.
  *
  * OpenNMS(R) is a registered trademark of The OpenNMS Group, Inc.
  *
@@ -28,7 +28,6 @@
 
 package org.opennms.elasticsearch.plugin.aggregations.bucket.histogram;
 
-import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertSearchResponse;
 import static org.elasticsearch.xcontent.XContentFactory.jsonBuilder;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.Matchers.closeTo;
@@ -38,6 +37,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
@@ -47,8 +47,8 @@ import org.elasticsearch.search.aggregations.BucketOrder;
 import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramInterval;
 import org.elasticsearch.search.aggregations.bucket.histogram.Histogram;
 import org.elasticsearch.test.ESIntegTestCase;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
+import java.time.Instant;
+import java.time.ZoneId;
 import org.junit.Test;
 import org.opennms.elasticsearch.plugin.DriftPlugin;
 
@@ -76,12 +76,12 @@ public class SamplingIT extends ESIntegTestCase {
         ensureSearchable();
     }
 
-    private DateTime date(int month, int day) {
-        return new DateTime(2012, month, day, 0, 0, DateTimeZone.UTC);
+    private Instant date(int month, int day) {
+        return Instant.parse(String.format(Locale.ROOT, "2012-%02d-%02dT00:00:00Z", month, day));
     }
 
-    private DateTime date(String date) {
-        return DateFieldMapper.DEFAULT_DATE_TIME_FORMATTER.parseJoda(date);
+    private Instant date(String date) {
+        return Instant.parse(date);
     }
 
     private IndexRequestBuilder indexDoc(int month, int day, int value, double interval) throws Exception {
@@ -89,10 +89,10 @@ public class SamplingIT extends ESIntegTestCase {
     }
 
     private IndexRequestBuilder indexDoc(int startMonth, int startDay, int endMonth, int endDay, int value, double interval) throws Exception {
-        final DateTime start = date(startMonth, startDay);
-        final DateTime end = date(endMonth, endDay);
+        final Instant start = date(startMonth, startDay);
+        final Instant end = date(endMonth, endDay);
 
-        return client().prepareIndex("idx", "type").setSource(jsonBuilder()
+        return client().prepareIndex("idx").setSource(jsonBuilder()
                 .startObject()
                 .field("value", value)
                 .field("constant", 1)
@@ -109,23 +109,26 @@ public class SamplingIT extends ESIntegTestCase {
                 .addAggregation(new ProportionalSumAggregationBuilder("histo")
                         .fields(Arrays.asList("start", "end", "value", "interval"))
                         .dateHistogramInterval(DateHistogramInterval.MONTH)
-                        .start(new DateTime(2012, 1, 1, 0, 0, DateTimeZone.UTC).getMillis())
-                        .end(new DateTime(2012, 1, 31, 0, 0, DateTimeZone.UTC).getMillis())
+                        .start(Instant.parse("2012-01-01T00:00:00Z").toEpochMilli())
+                        .end(Instant.parse("2012-01-31T00:00:00Z").toEpochMilli())
                         .order(BucketOrder.key(true))
                 )
                 .execute().actionGet();
+        
+        try {
 
-        assertSearchResponse(response);
+            Histogram histo = response.getAggregations().get("histo");
+            assertThat(histo, notNullValue());
+            assertThat(histo.getName(), equalTo("histo"));
+            List<? extends HistogramBucketWithValue> buckets = (List<? extends HistogramBucketWithValue>) histo.getBuckets();
+            assertThat(buckets.size(), equalTo(1));
 
-        Histogram histo = response.getAggregations().get("histo");
-        assertThat(histo, notNullValue());
-        assertThat(histo.getName(), equalTo("histo"));
-        List<? extends HistogramBucketWithValue> buckets = (List<? extends HistogramBucketWithValue>) histo.getBuckets();
-        assertThat(buckets.size(), equalTo(1));
-
-        assertThat(buckets.get(0).getKey(), equalTo(new DateTime(2012, 1, 1, 0, 0, DateTimeZone.UTC)));
-        assertThat(buckets.get(0).getDocCount(), equalTo(4L));
-        assertThat(buckets.get(0).getValue(), closeTo(400.0, 0.01));
+            assertThat(buckets.get(0).getKey(), equalTo(Instant.parse("2012-01-01T00:00:00Z")));
+            assertThat(buckets.get(0).getDocCount(), equalTo(4L));
+            assertThat(buckets.get(0).getValue(), closeTo(400.0, 0.01));
+        } finally {
+            response.decRef();
+        }
     }
 
     @Test
@@ -135,22 +138,25 @@ public class SamplingIT extends ESIntegTestCase {
                 .addAggregation(new ProportionalSumAggregationBuilder("histo")
                         .fields(Arrays.asList("start", "end", "value"))
                         .dateHistogramInterval(DateHistogramInterval.MONTH)
-                        .start(new DateTime(2012, 1, 1, 0, 0, DateTimeZone.UTC).getMillis())
-                        .end(new DateTime(2012, 1, 31, 0, 0, DateTimeZone.UTC).getMillis())
+                        .start(Instant.parse("2012-01-01T00:00:00Z").toEpochMilli())
+                        .end(Instant.parse("2012-01-31T00:00:00Z").toEpochMilli())
                         .order(BucketOrder.key(true))
                 )
                 .execute().actionGet();
+        
+        try {
 
-        assertSearchResponse(response);
+            Histogram histo = response.getAggregations().get("histo");
+            assertThat(histo, notNullValue());
+            assertThat(histo.getName(), equalTo("histo"));
+            List<? extends HistogramBucketWithValue> buckets = (List<? extends HistogramBucketWithValue>) histo.getBuckets();
+            assertThat(buckets.size(), equalTo(1));
 
-        Histogram histo = response.getAggregations().get("histo");
-        assertThat(histo, notNullValue());
-        assertThat(histo.getName(), equalTo("histo"));
-        List<? extends HistogramBucketWithValue> buckets = (List<? extends HistogramBucketWithValue>) histo.getBuckets();
-        assertThat(buckets.size(), equalTo(1));
-
-        assertThat(buckets.get(0).getKey(), equalTo(new DateTime(2012, 1, 1, 0, 0, DateTimeZone.UTC)));
-        assertThat(buckets.get(0).getDocCount(), equalTo(4L));
-        assertThat(buckets.get(0).getValue(), closeTo(106.0, 0.01));
+            assertThat(buckets.get(0).getKey(), equalTo(Instant.parse("2012-01-01T00:00:00Z")));
+            assertThat(buckets.get(0).getDocCount(), equalTo(4L));
+            assertThat(buckets.get(0).getValue(), closeTo(106.0, 0.01));
+        } finally {
+            response.decRef();
+        }
     }
 }
