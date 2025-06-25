@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         es_version:
-          - 8.18.3
+          - 8.17.0
     runs-on: ubuntu-latest
     container:
       image: quay.io/bluebird/java-builder:ubuntu.0.1.5.jdk-17.b21
@@ -38,7 +38,7 @@ jobs:
       - name: Persist drift-plugin artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: es-drift-${{ matrix.es_version }}
+          name: es-drift
           path: |
             drift/target/*.jar
             drift/target/releases/*.zip
@@ -60,3 +60,23 @@ jobs:
           for rpm in $(ls drift/target/releases/*-${{ github.run_number }}.noarch.rpm); do
             cloudsmith push rpm bluebird/common/any-distro/any-version ${rpm};
           done;
+
+  create-github-release:
+    needs:
+      - build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: es-drift
+      - name: Release ${{ github.ref_name }}
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            *.jar
+            releases/*.zip
+            releases/*.deb
+            releases/*.rpm
