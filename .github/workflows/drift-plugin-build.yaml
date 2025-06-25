@@ -40,6 +40,7 @@ jobs:
           - 7.17.26
           - 7.17.27
           - 7.17.28
+          - 7.17.29
     runs-on: ubuntu-latest
     container:
       image: quay.io/bluebird/java-builder:ubuntu.0.1.5.jdk-17.b21
