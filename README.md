@@ -211,5 +211,5 @@ The version must match exactly, otherwise Elasticsearch will refuse to start.
 
 Install the plugin using:
 ```
-/usr/share/elasticsearch/bin/elasticsearch-plugin install file:///path/to/elasticsearch-drift/plugin/target/releases/elasticsearch-drift-plugin-8.18.0-2.1.0.zip
+/usr/share/elasticsearch/bin/elasticsearch-plugin install file:///path/to/elasticsearch-drift/plugin/target/releases/elasticsearch-drift-plugin-8.18.0-2.2.0.zip
 ```
