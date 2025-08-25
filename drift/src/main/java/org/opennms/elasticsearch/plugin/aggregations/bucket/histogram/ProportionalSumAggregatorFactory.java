@@ -29,11 +29,9 @@
 package org.opennms.elasticsearch.plugin.aggregations.bucket.histogram;
 
 import java.io.IOException;
-import java.time.ZoneId;
 import java.util.Map;
 
 import org.elasticsearch.common.Rounding;
-import org.elasticsearch.index.mapper.DateFieldMapper;
 import org.elasticsearch.search.DocValueFormat;
 import org.elasticsearch.search.aggregations.Aggregator;
 import org.elasticsearch.search.aggregations.AggregatorFactories;

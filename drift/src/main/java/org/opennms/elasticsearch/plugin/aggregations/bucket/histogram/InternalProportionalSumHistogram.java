@@ -38,7 +38,6 @@ import org.elasticsearch.search.aggregations.bucket.histogram.HistogramFactory;
 import org.elasticsearch.search.aggregations.bucket.histogram.LongBounds;
 import org.elasticsearch.xcontent.XContentBuilder;
 import java.time.Instant;
-import java.time.ZoneId;
 
 import java.io.IOException;
 import java.util.ArrayList;

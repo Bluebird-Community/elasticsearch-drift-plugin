@@ -36,7 +36,6 @@ import java.util.Map;
 import java.util.function.LongUnaryOperator;
 import java.util.function.IntFunction;
 
-import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.util.CollectionUtil;
 import org.elasticsearch.common.Rounding;
 import org.elasticsearch.common.util.BigArrays;
