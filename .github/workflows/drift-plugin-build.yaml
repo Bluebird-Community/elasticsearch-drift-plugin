@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         es_version:
-          - 9.0.5
+          - 9.0.6
     runs-on: ubuntu-latest
     container:
       image: quay.io/bluebird/java-builder:ubuntu.0.1.5.jdk-21.b21
