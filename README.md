@@ -4,9 +4,9 @@
 
 Time series aggregation for flow records.
 Supported Elasticsearch versions:
-* 7.17.x
-* 8.17.x
-* 8.18.x
+* 7.x
+* 8.x
+* 9.x
  
 ## Overview
 
