@@ -89,8 +89,8 @@ public class ProportionalSumAggregationBuilder extends MultiValuesSourceAggregat
         dateFieldUnits.put("1d", Rounding.DateTimeUnit.DAY_OF_MONTH);
         dateFieldUnits.put("hour", Rounding.DateTimeUnit.HOUR_OF_DAY);
         dateFieldUnits.put("1h", Rounding.DateTimeUnit.HOUR_OF_DAY);
-        dateFieldUnits.put("minute", Rounding.DateTimeUnit.MINUTES_OF_HOUR);
-        dateFieldUnits.put("1m", Rounding.DateTimeUnit.MINUTES_OF_HOUR);
+        dateFieldUnits.put("minute", Rounding.DateTimeUnit.MINUTE_OF_HOUR);
+        dateFieldUnits.put("1m", Rounding.DateTimeUnit.MINUTE_OF_HOUR);
         dateFieldUnits.put("second", Rounding.DateTimeUnit.SECOND_OF_MINUTE);
         dateFieldUnits.put("1s", Rounding.DateTimeUnit.SECOND_OF_MINUTE);
         DATE_FIELD_UNITS = unmodifiableMap(dateFieldUnits);
