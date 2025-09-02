@@ -25,7 +25,7 @@
 
     <properties>
         <!-- in CI the revision is extracted from tags -->
-        <revision>2.2.1</revision>
+        <revision>2.2.2</revision>
 
         <log4j.version>2.20.0</log4j.version>
 
