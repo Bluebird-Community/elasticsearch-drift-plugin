@@ -328,17 +328,6 @@
                 </executions>
             </plugin>
             <plugin>
-                <groupId>org.sonatype.plugins</groupId>
-                <artifactId>nexus-staging-maven-plugin</artifactId>
-                <version>1.7.0</version>
-                <extensions>true</extensions>
-                <configuration>
-                    <serverId>bluebird</serverId>
-                    <nexusUrl>https://repo.maven.bluebirdops.org/releases</nexusUrl>
-                    <autoReleaseAfterClose>true</autoReleaseAfterClose>
-                </configuration>
-            </plugin>
-            <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>flatten-maven-plugin</artifactId>
                 <version>1.5.0</version>
@@ -408,4 +397,10 @@
             </build>
         </profile>
     </profiles>
+    <distributionManagement>
+        <repository>
+            <id>bluebird</id>
+            <url>https://repo.maven.bluebirdops.org/releases</url>
+        </repository>
+    </distributionManagement>
 </project>
