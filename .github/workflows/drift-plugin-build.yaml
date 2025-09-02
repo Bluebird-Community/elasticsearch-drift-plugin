@@ -11,10 +11,10 @@ jobs:
     strategy:
       matrix:
         es_version:
-          - 8.19.3
+          - 9.0.0
     runs-on: ubuntu-latest
     container:
-      image: quay.io/bluebird/java-builder:ubuntu.0.1.5.jdk-17.b21
+      image: quay.io/bluebird/java-builder:ubuntu.0.1.5.jdk-21.b21
     steps:
       - uses: actions/checkout@v4
       - name: Add workspace to git safe.directory

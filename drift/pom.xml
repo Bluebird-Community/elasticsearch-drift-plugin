@@ -16,7 +16,7 @@
     </parent>
 
     <properties>
-        <elasticsearch.version>8.19.3</elasticsearch.version>
+        <elasticsearch.version>9.0.0</elasticsearch.version>
     </properties>
 
     <dependencies>
@@ -53,7 +53,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.14.0</version>
                 <configuration>
-                    <release>17</release>
+                    <release>21</release>
                 </configuration>
             </plugin>
             <plugin>
