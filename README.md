@@ -200,12 +200,12 @@ make tests
 
 Building RPM and DEB packages can be done with.
 The ES_VERSION needs to match your pom build dependency version to indicate users where they can install the plugin.
-The package version is just a increasing number which identifies the package version release.
+The package version is just an increasing number which identifies the package version release.
 
 ```bash
  make ES_VERSION=8.19.4 PACKAGE_VERSION=0 packages
 
- ```
+```
 Next, ensure set up an Elasticsearch instance using the same version that is defined in the `pom.xml`.
 The version must match exactly, otherwise Elasticsearch will refuse to start.
 
