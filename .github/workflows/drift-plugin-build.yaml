@@ -64,6 +64,10 @@ jobs:
   create-github-release:
     needs:
       - build
+    strategy:
+      matrix:
+        es_version:
+          - 9.1.5
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
