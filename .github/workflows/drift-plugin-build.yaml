@@ -11,12 +11,12 @@ jobs:
     strategy:
       matrix:
         es_version:
-          - 9.2.0
+          - 9.1.6
     runs-on: ubuntu-latest
     container:
-      image: quay.io/bluebird/java-builder:ubuntu.0.1.5.jdk-21.b22
+      image: quay.io/bluebird/java-builder:ubuntu.0.3.0.jdk-21.b31
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Add workspace to git safe.directory
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: Build plugin from source
@@ -67,7 +67,7 @@ jobs:
     strategy:
       matrix:
         es_version:
-          - 9.2.0
+          - 9.1.6
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
