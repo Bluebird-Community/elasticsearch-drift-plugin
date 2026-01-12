@@ -32,7 +32,7 @@ sudo dnf install elasticsearch-drift-plugin
 ```
 
 > [!TIP]
-> You can install a specific version using -x.y.z, e.g. elasticsearch-drift-plugin-9.1.6
+> You can install a specific version using -x.y.z, e.g. elasticsearch-drift-plugin-9.1.7
 
 ### Debian
 
@@ -47,7 +47,7 @@ sudo apt install elasticsearch-drift-plugin
 ```
 
 > [!TIP]
-> You can install a specific version using -x.y.z, e.g. elasticsearch-drift-plugin=9.1.6
+> You can install a specific version using -x.y.z, e.g. elasticsearch-drift-plugin=9.1.7
 > 
 ## Use Case
 
@@ -203,7 +203,7 @@ The ES_VERSION needs to match your pom build dependency version to indicate user
 The package version is just an increasing number which identifies the package version release.
 
 ```bash
- make ES_VERSION=9.1.6 PACKAGE_VERSION=0 packages
+ make ES_VERSION=9.1.7 PACKAGE_VERSION=0 packages
 
 ```
 Next, ensure set up an Elasticsearch instance using the same version that is defined in the `pom.xml`.
@@ -211,5 +211,5 @@ The version must match exactly, otherwise Elasticsearch will refuse to start.
 
 Install the plugin using:
 ```
-/usr/share/elasticsearch/bin/elasticsearch-plugin install file:///path/to/elasticsearch-drift/plugin/target/releases/elasticsearch-drift-plugin-9.1.6-2.2.2.zip
+/usr/share/elasticsearch/bin/elasticsearch-plugin install file:///path/to/elasticsearch-drift/plugin/target/releases/elasticsearch-drift-plugin-9.1.7-2.2.2.zip
 ```
