@@ -16,7 +16,7 @@
     </parent>
 
     <properties>
-        <elasticsearch.version>9.2.5</elasticsearch.version>
+        <elasticsearch.version>9.3.0</elasticsearch.version>
     </properties>
 
     <dependencies>
